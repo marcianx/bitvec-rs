@@ -1,5 +1,6 @@
-//! Bit vector with guaranteed `[u8]` representation and the ability to get safe immutable and
-//! mutable views into its internal vector for easy I/O.
+//! This is a bit vector implementation with guaranteed `[u8]` representation and
+//! the ability to get safe immutable and mutable views into its internal vector for
+//! easy I/O.
 //!
 //! It mirrors the API of `std::vec::Vec` as much as possible.
 
