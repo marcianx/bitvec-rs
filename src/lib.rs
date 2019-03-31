@@ -78,6 +78,9 @@ impl BitVec {
     /// Returns the length of the bit vector.
     pub fn len(&self) -> usize { self.nbits }
 
+    /// Returns whether the vector is empty.
+    pub fn is_empty(&self) -> bool { self.nbits == 0 }
+
     /// Validates the index for validity or panics.
     fn validate_index(&self, index: usize) {
         assert!(self.nbits <= self.vec.len() * 8,
@@ -237,9 +240,9 @@ impl fmt::Display for BitVec {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for (val, index) in self.iter().zip(0..usize::max_value()) {
             if index > 0 && index % 8 == 0 {
-                try!(write!(f, " "));
+                write!(f, " ")?;
             }
-            try!(write!(f, "{}", if val { "1" } else { "." }));
+            write!(f, "{}", if val { "1" } else { "." })?;
         }
         Ok(())
     }
