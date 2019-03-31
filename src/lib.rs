@@ -11,7 +11,7 @@ use std::num::Wrapping;
 
 /// Bit vector with guaranteed `[u8]` representation and safe mutable access to this slice.
 /// Slices into the bit vector are guaranteed to have the unused bits on the last set to 0.
-#[derive(Clone, Eq)]
+#[derive(Clone, Default, PartialEq, Eq)]
 pub struct BitVec {
     nbits: usize,
     vec: Vec<u8>
@@ -224,12 +224,6 @@ impl BitVec {
         // Pattern with all 1's in the used bits only, avoiding overflow check in debug.
         let pattern = (Wrapping(1u8 << (self.nbits % 8)) - Wrapping(1u8)).0;
         *byte &= pattern;
-    }
-}
-
-impl PartialEq<BitVec> for BitVec {
-    fn eq(&self, other: &BitVec) -> bool {
-        self.nbits == other.nbits && self.vec == other.vec
     }
 }
 
