@@ -314,6 +314,7 @@ impl<'a> ::std::convert::From<BitVec> for Vec<bool> {
 // Iterators
 
 /// Allows forward iteration through the bits of a bit vector.
+#[derive(Clone)]
 pub struct Iter<'a> {
     vec: &'a BitVec,
     index: usize
@@ -321,6 +322,33 @@ pub struct Iter<'a> {
 
 impl<'a> Iterator for Iter<'a> {
     type Item = bool;
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let remaining = self.vec.len() - self.index;
+        (remaining, Some(remaining))
+    }
+
+    fn count(self) -> usize {
+        self.vec.len() - self.index
+    }
+
+    fn last(self) -> Option<Self::Item> {
+        let len = self.vec.len();
+        if self.index < len {
+            Some(unsafe { self.vec.get_unchecked(len - 1) })
+        } else {
+            None
+        }
+    }
+
+    fn nth(&mut self, count: usize) -> Option<Self::Item> {
+        self.index = if count >= self.vec.nbits - self.index {
+            self.vec.nbits
+        } else {
+            self.index + count
+        };
+        self.next()
+    }
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.index >= self.vec.nbits {
@@ -667,5 +695,34 @@ mod test {
         vec.resize(17, true);
         assert_eq!(vec.len(), 17);
         assert_eq!(vec.as_bytes(), &[0xef, 0xf5, 0x01]);
+    }
+
+    #[test]
+    fn test_iter_overrides() {
+        let from: &[bool] = &[true, false, false, true, true, false, false, true, true, true, false];
+        let vec = BitVec::from_bools(from);
+        assert_eq!(vec.len(), 11);
+        assert_eq!(vec.iter().size_hint(), (11, Some(11)));
+        assert_eq!(vec.iter().count(), 11);
+        assert_eq!(vec.iter().last(), Some(false));
+
+        // nth from scratch
+        for (index, &b) in from.iter().enumerate() {
+            assert_eq!(vec.iter().nth(index), Some(b));
+        }
+        assert_eq!(vec.iter().nth(11), None);
+
+        // partially-consumed iterators
+        let mut iter = vec.iter();
+        for (index, &b) in from.iter().enumerate() {
+            assert_eq!(iter.size_hint(), (11 - index, Some(11 - index)));
+            assert_eq!(iter.clone().count(), 11 - index);
+            assert_eq!(iter.clone().last(), Some(false));
+            assert_eq!(iter.nth(0), Some(b));
+        }
+        assert_eq!(iter.size_hint(), (0, Some(0)));
+        assert_eq!(iter.clone().count(), 0);
+        assert_eq!(iter.clone().last(), None);
+        assert_eq!(iter.nth(0), None);
     }
 }
