@@ -50,6 +50,15 @@ impl BitVec {
         vec
     }
 
+    /// Constructs a `BitVec` from bools.
+    pub fn from_bools(bools: &[bool]) -> BitVec {
+        let mut vec = BitVec::with_capacity(bools.len());
+        for &b in bools {
+            vec.push(b);
+        }
+        vec
+    }
+
     /// Constructs a `BitVec` from a repeating bit value.
     pub fn from_elem(len: usize, value: bool) -> BitVec {
         let mut vec = BitVec {
@@ -271,6 +280,24 @@ impl<'a> ::std::iter::Extend<&'a bool> for BitVec {
     }
 }
 
+impl ::std::convert::From<&[bool]> for BitVec {
+    fn from(bools: &[bool]) -> Self {
+        BitVec::from_bools(bools)
+    }
+}
+
+impl ::std::convert::From<&Vec<bool>> for BitVec {
+    fn from(bools: &Vec<bool>) -> Self {
+        BitVec::from_bools(bools)
+    }
+}
+
+impl ::std::convert::From<Vec<bool>> for BitVec {
+    fn from(bools: Vec<bool>) -> Self {
+        BitVec::from_bools(&bools)
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Iterators
 
@@ -353,7 +380,28 @@ mod test {
     }
 
     #[test]
-    fn test_constructors_from_data() {
+    fn test_constructors_from_bools() {
+        let from: &[bool] = &[true, false, false, true, true, false, false, true, true, true, false];
+        let vec: BitVec = BitVec::from_bools(from);
+        assert_eq!(vec.len(), 11);
+        assert_eq!(vec.as_bytes(), &[0x99, 0x03]);
+        let vec: BitVec = from.into();
+        assert_eq!(vec.len(), 11);
+        assert_eq!(vec.as_bytes(), &[0x99, 0x03]);
+
+        let from = &vec![true, false, false, true, true, false, false, true, true, true, false];
+        let vec: BitVec = from.into();
+        assert_eq!(vec.len(), 11);
+        assert_eq!(vec.as_bytes(), &[0x99, 0x03]);
+
+        let from = vec![true, false, false, true, true, false, false, true, true, true, false];
+        let vec: BitVec = from.into();
+        assert_eq!(vec.len(), 11);
+        assert_eq!(vec.as_bytes(), &[0x99, 0x03]);
+    }
+
+    #[test]
+    fn test_constructors_from_bytes() {
         let vec = BitVec::from_bytes(&[0xab, 0xcd]);
         assert_eq!(vec.len(), 16);
         assert_eq!(vec.as_bytes(), &[0xab, 0xcd]);
