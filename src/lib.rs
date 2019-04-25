@@ -298,6 +298,18 @@ impl ::std::convert::From<Vec<bool>> for BitVec {
     }
 }
 
+impl<'a> ::std::convert::From<&'a BitVec> for Vec<bool> {
+    fn from(vec: &'a BitVec) -> Self {
+        vec.iter().collect()
+    }
+}
+
+impl<'a> ::std::convert::From<BitVec> for Vec<bool> {
+    fn from(vec: BitVec) -> Self {
+        vec.iter().collect()
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Iterators
 
@@ -380,11 +392,16 @@ mod test {
     }
 
     #[test]
-    fn test_constructors_from_bools() {
+    fn test_convert_from_to_bools() {
         let from: &[bool] = &[true, false, false, true, true, false, false, true, true, true, false];
         let vec: BitVec = BitVec::from_bools(from);
         assert_eq!(vec.len(), 11);
         assert_eq!(vec.as_bytes(), &[0x99, 0x03]);
+        let bools: Vec<bool> = (&vec).into();
+        assert_eq!(bools, from);
+        let bools: Vec<bool> = vec.into();
+        assert_eq!(bools, from);
+
         let vec: BitVec = from.into();
         assert_eq!(vec.len(), 11);
         assert_eq!(vec.as_bytes(), &[0x99, 0x03]);
@@ -393,11 +410,19 @@ mod test {
         let vec: BitVec = from.into();
         assert_eq!(vec.len(), 11);
         assert_eq!(vec.as_bytes(), &[0x99, 0x03]);
+        let bools: Vec<bool> = (&vec).into();
+        assert_eq!(&bools, from);
+        let bools: Vec<bool> = vec.into();
+        assert_eq!(&bools, from);
 
         let from = vec![true, false, false, true, true, false, false, true, true, true, false];
-        let vec: BitVec = from.into();
+        let vec: BitVec = from.clone().into();
         assert_eq!(vec.len(), 11);
         assert_eq!(vec.as_bytes(), &[0x99, 0x03]);
+        let bools: Vec<bool> = (&vec).into();
+        assert_eq!(&bools, &from);
+        let bools: Vec<bool> = vec.into();
+        assert_eq!(&bools, &from);
     }
 
     #[test]
