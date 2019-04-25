@@ -19,8 +19,7 @@ pub struct BitVec {
 
 fn bytes_in_bits(nbits: usize) -> usize {
     // #bytes = #ceil(nbits / 8)
-    nbits / 8 +
-        if nbits % 8 != 0 { 1 } else { 0 }
+    (nbits + 7) / 8
 }
 
 fn byte_from_bool(bit: bool) -> u8 {
@@ -34,6 +33,14 @@ impl BitVec {
     /// Constructs an empty `BitVec`.
     pub fn new() -> BitVec {
         BitVec { vec: Vec::new(), nbits: 0 }
+    }
+
+    /// Constructs an empty `BitVec` with the given capacity.
+    ///
+    /// The bit vector will be able to hold at least capacity bits without reallocating. If
+    /// capacity is 0, the bit vector will not allocate.
+    pub fn with_capacity(capacity: usize) -> BitVec {
+        BitVec { vec: Vec::with_capacity(bytes_in_bits(capacity)), nbits: 0 }
     }
 
     /// Constructs a `BitVec` from bytes.
@@ -172,7 +179,7 @@ impl BitVec {
     }
 
     /// Returns the number of booleans that the bitvec can hold without reallocating.
-    pub fn capacity(&mut self) -> usize {
+    pub fn capacity(&self) -> usize {
         self.vec.capacity() * 8
     }
 
@@ -318,11 +325,35 @@ mod test {
     }
 
     #[test]
-    fn test_constructors() {
+    fn test_constructors_for_empty() {
         let vec = BitVec::new();
         assert_eq!(vec.len(), 0);
+        assert_eq!(vec.capacity(), 0);
         assert_eq!(vec.as_bytes(), &[]);
 
+        let vec = BitVec::with_capacity(0);
+        assert_eq!(vec.len(), 0);
+        assert_eq!(vec.capacity(), 0);
+        assert_eq!(vec.as_bytes(), &[]);
+
+        let vec = BitVec::with_capacity(1);
+        assert_eq!(vec.len(), 0);
+        assert_eq!(vec.capacity(), 8);
+        assert_eq!(vec.as_bytes(), &[]);
+
+        let vec = BitVec::with_capacity(8);
+        assert_eq!(vec.len(), 0);
+        assert_eq!(vec.capacity(), 8);
+        assert_eq!(vec.as_bytes(), &[]);
+
+        let vec = BitVec::with_capacity(9);
+        assert_eq!(vec.len(), 0);
+        assert_eq!(vec.capacity(), 16);
+        assert_eq!(vec.as_bytes(), &[]);
+    }
+
+    #[test]
+    fn test_constructors_from_data() {
         let vec = BitVec::from_bytes(&[0xab, 0xcd]);
         assert_eq!(vec.len(), 16);
         assert_eq!(vec.as_bytes(), &[0xab, 0xcd]);
