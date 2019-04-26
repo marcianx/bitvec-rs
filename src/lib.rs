@@ -227,7 +227,7 @@ impl BitVec {
 
     /// Returns an iterator for the booleans in the array.
     pub fn iter(&self) -> Iter {
-        Iter { vec: self, index: 0 }
+        self.into_iter()
     }
 
     ////////////////////////////////////////
@@ -317,46 +317,84 @@ impl<'a> ::std::convert::From<BitVec> for Vec<bool> {
 #[derive(Clone)]
 pub struct Iter<'a> {
     vec: &'a BitVec,
-    index: usize
+    index: usize,
+}
+
+/// Consumes and allows forward iteration through the bits of a bit vector.
+pub struct IntoIter {
+    vec: BitVec,
+    index: usize,
+}
+
+macro_rules! impl_iter {
+    () => {
+        type Item = bool;
+
+        fn size_hint(&self) -> (usize, Option<usize>) {
+            let remaining = self.vec.len() - self.index;
+            (remaining, Some(remaining))
+        }
+
+        fn count(self) -> usize {
+            self.vec.len() - self.index
+        }
+
+        fn last(self) -> Option<Self::Item> {
+            let len = self.vec.len();
+            if self.index < len {
+                Some(unsafe { self.vec.get_unchecked(len - 1) })
+            } else {
+                None
+            }
+        }
+
+        fn nth(&mut self, count: usize) -> Option<Self::Item> {
+            self.index = if count >= self.vec.nbits - self.index {
+                self.vec.nbits
+            } else {
+                self.index + count
+            };
+            self.next()
+        }
+
+        fn next(&mut self) -> Option<Self::Item> {
+            if self.index >= self.vec.nbits {
+                None
+            } else {
+                let val = unsafe { self.vec.get_unchecked(self.index) };
+                self.index += 1;
+                Some(val)
+            }
+        }
+    };
 }
 
 impl<'a> Iterator for Iter<'a> {
+    impl_iter!();
+}
+
+impl Iterator for IntoIter {
+    impl_iter!();
+}
+
+impl<'a> IntoIterator for &'a BitVec {
     type Item = bool;
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        let remaining = self.vec.len() - self.index;
-        (remaining, Some(remaining))
-    }
-
-    fn count(self) -> usize {
-        self.vec.len() - self.index
-    }
-
-    fn last(self) -> Option<Self::Item> {
-        let len = self.vec.len();
-        if self.index < len {
-            Some(unsafe { self.vec.get_unchecked(len - 1) })
-        } else {
-            None
+    type IntoIter = Iter<'a>;
+    fn into_iter(self) -> Self::IntoIter {
+        Iter {
+            vec: self,
+            index: 0,
         }
     }
+}
 
-    fn nth(&mut self, count: usize) -> Option<Self::Item> {
-        self.index = if count >= self.vec.nbits - self.index {
-            self.vec.nbits
-        } else {
-            self.index + count
-        };
-        self.next()
-    }
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.index >= self.vec.nbits {
-            None
-        } else {
-            let val = unsafe { self.vec.get_unchecked(self.index) };
-            self.index += 1;
-            Some(val)
+impl IntoIterator for BitVec {
+    type Item = bool;
+    type IntoIter = IntoIter;
+    fn into_iter(self) -> Self::IntoIter {
+        IntoIter {
+            vec: self,
+            index: 0,
         }
     }
 }
@@ -582,8 +620,8 @@ mod test {
         assert_eq!(vec.as_bytes(), &[]);
     }
 
-    fn assert_iter_eq(vec: &BitVec, expected: &Vec<bool>) {
-        let actual: Vec<bool> = vec.iter().collect();
+    fn assert_iter_eq<I: IntoIterator<Item=bool>>(vec: I, expected: &Vec<bool>) {
+        let actual: Vec<bool> = vec.into_iter().collect();
         assert_eq!(&actual, expected);
     }
 
@@ -601,6 +639,22 @@ mod test {
         
         // low bit to high bit:       f       e        5       a        1     3
         assert_iter_eq(&vec, &vec![l,l,l,l,o,l,l,l, l,o,l,o,o,l,o,l, l,o,o,o,l,l]);
+    }
+
+    #[test]
+    fn test_into_iter() {
+        let l = true;
+        let o = false;
+
+        assert_iter_eq(&BitVec::new(), &Vec::new());
+
+        let mut vec = BitVec::from_bytes(&[0xef, 0xa5, 0x71]);
+        // low bit to high bit:       f       e        5       a        1       7
+        assert_iter_eq(vec.clone(), &vec![l,l,l,l,o,l,l,l, l,o,l,o,o,l,o,l, l,o,o,o,l,l,l,o]);
+        vec.pop(); vec.pop();
+
+        // low bit to high bit:       f       e        5       a        1     3
+        assert_iter_eq(vec.clone(), &vec![l,l,l,l,o,l,l,l, l,o,l,o,o,l,o,l, l,o,o,o,l,l]);
     }
 
     #[test]
