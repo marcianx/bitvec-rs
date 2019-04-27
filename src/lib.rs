@@ -83,10 +83,14 @@ impl BitVec {
         val
     }
 
+    #[deprecated(since="0.1.4", note="Use `into_bytes()` instead.")]
+    /// Deprecated. Use `into_bytes()` instead.
+    pub fn into_vec(self) -> Vec<u8> { self.vec }
+
     /// Consumes the `self` and returns the underlying `Vec<u8>` of length `ceil(self.len()/8)`.
     /// The values of the bits in the last byte of `Vec<u8>` beyond the length of the `BitVec` are
-    /// unspecified.
-    pub fn into_vec(self) -> Vec<u8> { self.vec }
+    /// 0.
+    pub fn into_bytes(self) -> Vec<u8> { self.vec }
 
     ////////////////////////////////////////
     // Getters/setters
@@ -530,11 +534,11 @@ mod test {
     }
 
     #[test]
-    fn test_into_vec() {
+    fn test_into_bytes() {
         let mut vec = BitVec::from_bytes(&[0xef, 0xcd, 0xab, 0x89, 0x67, 0x45, 0xe3]);
         vec.pop(); vec.pop();
         assert_eq!(vec.len(), 54);
-        let vec = vec.into_vec();
+        let vec = vec.into_bytes();
         assert_eq!(vec, &[0xef, 0xcd, 0xab, 0x89, 0x67, 0x45, 0x23]);
     }
 
