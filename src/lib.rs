@@ -272,7 +272,10 @@ impl ::std::iter::Extend<bool> for BitVec {
     fn extend<T>(&mut self, iterable: T)
         where T: ::std::iter::IntoIterator<Item = bool>
     {
-        for val in iterable { self.push(val); }
+        let iter = iterable.into_iter();
+        let (min, max) = iter.size_hint();
+        self.reserve(max.unwrap_or(min));
+        for val in iter { self.push(val); }
     }
 }
 
@@ -280,7 +283,10 @@ impl<'a> ::std::iter::Extend<&'a bool> for BitVec {
     fn extend<T>(&mut self, iterable: T)
         where T: ::std::iter::IntoIterator<Item = &'a bool>
     {
-        for val in iterable { self.push(*val); }
+        let iter = iterable.into_iter();
+        let (min, max) = iter.size_hint();
+        self.reserve(max.unwrap_or(min));
+        for val in iter { self.push(*val); }
     }
 }
 
