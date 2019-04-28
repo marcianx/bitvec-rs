@@ -2,7 +2,8 @@
 //! the ability to get safe immutable and mutable views into its internal vector for
 //! easy I/O.
 //!
-//! It mirrors the API of `std::vec::Vec` as much as possible.
+//! It mirrors the API of `std::vec::Vec` as much as possible. Notable differences:
+//! - `BitVec`'s non-consuming iterator enumerates `bool`s instead of `&bool`s.
 
 // TODO: Flesh out docs.
 
@@ -82,10 +83,6 @@ impl BitVec {
         self.set_unused_zero();
         val
     }
-
-    #[deprecated(since="0.1.4", note="Use `into_bytes()` instead.")]
-    /// Deprecated. Use `into_bytes()` instead.
-    pub fn into_vec(self) -> Vec<u8> { self.vec }
 
     /// Consumes the `self` and returns the underlying `Vec<u8>` of length `ceil(self.len()/8)`.
     /// The values of the bits in the last byte of `Vec<u8>` beyond the length of the `BitVec` are
@@ -229,7 +226,7 @@ impl BitVec {
     ////////////////////////////////////////
     // Iterators
 
-    /// Returns an iterator for the booleans in the array.
+    /// Returns an iterator for the booleans in the bitvec.
     pub fn iter(&self) -> Iter {
         self.into_iter()
     }
@@ -270,7 +267,7 @@ impl fmt::Display for BitVec {
 
 impl Extend<bool> for BitVec {
     fn extend<T>(&mut self, iterable: T)
-        where T: ::std::iter::IntoIterator<Item = bool>
+        where T: IntoIterator<Item = bool>
     {
         let iter = iterable.into_iter();
         let (min, max) = iter.size_hint();
@@ -281,7 +278,7 @@ impl Extend<bool> for BitVec {
 
 impl<'a> Extend<&'a bool> for BitVec {
     fn extend<T>(&mut self, iterable: T)
-        where T: ::std::iter::IntoIterator<Item = &'a bool>
+        where T: IntoIterator<Item = &'a bool>
     {
         let iter = iterable.into_iter();
         let (min, max) = iter.size_hint();
@@ -329,18 +326,6 @@ impl From<&Vec<bool>> for BitVec {
 impl From<Vec<bool>> for BitVec {
     fn from(bools: Vec<bool>) -> Self {
         BitVec::from_bools(&bools)
-    }
-}
-
-impl<'a> From<&'a BitVec> for Vec<bool> {
-    fn from(vec: &'a BitVec) -> Self {
-        vec.iter().collect()
-    }
-}
-
-impl<'a> From<BitVec> for Vec<bool> {
-    fn from(vec: BitVec) -> Self {
-        vec.iter().collect()
     }
 }
 

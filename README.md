@@ -4,7 +4,8 @@ This is a bit vector implementation with guaranteed `[u8]` representation and
 the ability to get safe immutable and mutable views into its internal vector for
 easy I/O.
 
-It mirrors the API of `std::vec::Vec` as much as possible.
+It mirrors the API of `std::vec::Vec` as much as possible. Notable differences:
+- `BitVec`'s non-consuming iterator enumerates `bool`s instead of `&bool`s.
 
 ## License
 
