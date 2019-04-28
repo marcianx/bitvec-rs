@@ -1,6 +1,6 @@
 [package]
 name = "bitvec-rs"
-version = "0.1.5"
+version = "0.2.0"
 authors = ["Ashish Myles <marcianx@gmail.com>"]
 repository = "https://github.com/marcianx/bitvec-rs"
 description = """
