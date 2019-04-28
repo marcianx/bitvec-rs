@@ -268,7 +268,7 @@ impl fmt::Display for BitVec {
     }
 }
 
-impl ::std::iter::Extend<bool> for BitVec {
+impl Extend<bool> for BitVec {
     fn extend<T>(&mut self, iterable: T)
         where T: ::std::iter::IntoIterator<Item = bool>
     {
@@ -279,7 +279,7 @@ impl ::std::iter::Extend<bool> for BitVec {
     }
 }
 
-impl<'a> ::std::iter::Extend<&'a bool> for BitVec {
+impl<'a> Extend<&'a bool> for BitVec {
     fn extend<T>(&mut self, iterable: T)
         where T: ::std::iter::IntoIterator<Item = &'a bool>
     {
@@ -290,31 +290,55 @@ impl<'a> ::std::iter::Extend<&'a bool> for BitVec {
     }
 }
 
-impl ::std::convert::From<&[bool]> for BitVec {
+impl ::std::iter::FromIterator<bool> for BitVec {
+    fn from_iter<T>(iterable: T) -> Self
+        where T: IntoIterator<Item = bool>
+    {
+        let iter = iterable.into_iter();
+        let (min, max) = iter.size_hint();
+        let mut vec = BitVec::with_capacity(max.unwrap_or(min));
+        for val in iter { vec.push(val); }
+        vec
+    }
+}
+
+impl<'a> ::std::iter::FromIterator<&'a bool> for BitVec {
+    fn from_iter<T>(iterable: T) -> Self
+        where T: IntoIterator<Item = &'a bool>
+    {
+        let iter = iterable.into_iter();
+        let (min, max) = iter.size_hint();
+        let mut vec = BitVec::with_capacity(max.unwrap_or(min));
+        for &val in iter { vec.push(val); }
+        vec
+    }
+}
+
+impl From<&[bool]> for BitVec {
     fn from(bools: &[bool]) -> Self {
         BitVec::from_bools(bools)
     }
 }
 
-impl ::std::convert::From<&Vec<bool>> for BitVec {
+impl From<&Vec<bool>> for BitVec {
     fn from(bools: &Vec<bool>) -> Self {
         BitVec::from_bools(bools)
     }
 }
 
-impl ::std::convert::From<Vec<bool>> for BitVec {
+impl From<Vec<bool>> for BitVec {
     fn from(bools: Vec<bool>) -> Self {
         BitVec::from_bools(&bools)
     }
 }
 
-impl<'a> ::std::convert::From<&'a BitVec> for Vec<bool> {
+impl<'a> From<&'a BitVec> for Vec<bool> {
     fn from(vec: &'a BitVec) -> Self {
         vec.iter().collect()
     }
 }
 
-impl<'a> ::std::convert::From<BitVec> for Vec<bool> {
+impl<'a> From<BitVec> for Vec<bool> {
     fn from(vec: BitVec) -> Self {
         vec.iter().collect()
     }
@@ -468,15 +492,23 @@ mod test {
     }
 
     #[test]
-    fn test_convert_from_to_bools() {
+    fn test_convert_to_bools() {
+        let from: &[bool] = &[true, false, false, true, true, false, false, true, true, true, false];
+        let vec: BitVec = BitVec::from_bools(from);
+        let bools: Vec<bool> = (&vec).iter().collect();
+        assert_eq!(bools, from);
+        let bools: Vec<bool> = vec.iter().collect();
+        assert_eq!(bools, from);
+    }
+
+    #[test]
+    fn test_convert_from_bools() {
+        use std::iter::FromIterator;
+
         let from: &[bool] = &[true, false, false, true, true, false, false, true, true, true, false];
         let vec: BitVec = BitVec::from_bools(from);
         assert_eq!(vec.len(), 11);
         assert_eq!(vec.as_bytes(), &[0x99, 0x03]);
-        let bools: Vec<bool> = (&vec).into();
-        assert_eq!(bools, from);
-        let bools: Vec<bool> = vec.into();
-        assert_eq!(bools, from);
 
         let vec: BitVec = from.into();
         assert_eq!(vec.len(), 11);
@@ -486,19 +518,17 @@ mod test {
         let vec: BitVec = from.into();
         assert_eq!(vec.len(), 11);
         assert_eq!(vec.as_bytes(), &[0x99, 0x03]);
-        let bools: Vec<bool> = (&vec).into();
-        assert_eq!(&bools, from);
-        let bools: Vec<bool> = vec.into();
-        assert_eq!(&bools, from);
+        let vec = BitVec::from_iter(from);
+        assert_eq!(vec.len(), 11);
+        assert_eq!(vec.as_bytes(), &[0x99, 0x03]);
 
         let from = vec![true, false, false, true, true, false, false, true, true, true, false];
         let vec: BitVec = from.clone().into();
         assert_eq!(vec.len(), 11);
         assert_eq!(vec.as_bytes(), &[0x99, 0x03]);
-        let bools: Vec<bool> = (&vec).into();
-        assert_eq!(&bools, &from);
-        let bools: Vec<bool> = vec.into();
-        assert_eq!(&bools, &from);
+        let vec = BitVec::from_iter(from);
+        assert_eq!(vec.len(), 11);
+        assert_eq!(vec.as_bytes(), &[0x99, 0x03]);
     }
 
     #[test]
