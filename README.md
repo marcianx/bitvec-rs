@@ -1,8 +1,10 @@
 # bitvec-rs
 
-This is a bit vector implementation with guaranteed `[u8]` representation and
-the ability to get safe immutable and mutable views into its internal vector for
-easy I/O.
+This is a bit vector implementation with guaranteed `[u8]` [LSB 0][1]
+representation and the ability to get safe immutable and mutable views into its
+internal vector for easy I/O.
+
+[1]: https://en.wikipedia.org/wiki/Bit_numbering#LSB_0_bit_numbering
 
 It mirrors the API of `std::vec::Vec` as much as possible. Notable differences:
 - `BitVec`'s non-consuming iterator enumerates `bool`s instead of `&bool`s.
