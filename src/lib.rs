@@ -12,8 +12,12 @@
 use std::fmt;
 use std::num::Wrapping;
 
+#[cfg(feature = "serde")]
+#[macro_use] extern crate serde;
+
 /// Bit vector with guaranteed `[u8]` LSB 0 representation and safe mutable access to this slice.
 /// Slices into the bit vector are guaranteed to have the unused bits on the last byte set to 0.
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Clone, Default, PartialEq, Eq)]
 pub struct BitVec {
     nbits: usize,

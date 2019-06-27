@@ -11,3 +11,7 @@ readme = "README.md"
 keywords = ["bit", "vector", "bitvec"]
 license = "MIT/Apache-2.0"
 
+[dependencies.serde]
+version = "*"
+optional = true
+features = [ "derive" ]
