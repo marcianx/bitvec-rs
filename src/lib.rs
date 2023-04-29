@@ -35,11 +35,32 @@ pub struct BitVec {
 /// Slices into the bit vector are guaranteed to have the unused bits on the last byte set to 0.
 #[cfg(feature = "custom-allocator")]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
-#[derive(Clone, Default, PartialEq, Eq)]
+#[derive(Clone, Default)]
 pub struct BitVec<A: Allocator = Global> where Vec<u8, A>: Default {
     nbits: usize,
     vec: Vec<u8, A>
 }
+
+// explicitly allow comparisons between BitVecs regardless of whether
+// they use the same allocator or whether their allocator implements
+// PartialEq or not
+#[cfg(feature = "custom-allocator")]
+impl<A: Allocator, B: Allocator> PartialEq<BitVec<B>> for BitVec<A>
+    where Vec<u8, B>: Default, Vec<u8, A>: Default
+{
+    
+    fn eq(&self, other: &BitVec<B>) -> bool {
+        self.nbits == other.nbits && self.vec == other.vec
+    }
+
+    fn ne(&self, other: &BitVec<B>) -> bool {
+        self.nbits != other.nbits || self.vec != other.vec
+    }
+
+}
+
+#[cfg(feature = "custom-allocator")]
+impl Eq for BitVec {}
 
 fn bytes_in_bits(nbits: usize) -> usize {
     // #bytes = #ceil(nbits / 8)
