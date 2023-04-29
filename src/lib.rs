@@ -691,7 +691,7 @@ mod test {
     #[test]
     #[should_panic(expected = "out of bounds")]
     fn test_set_validation() {
-        &BitVec::from_bytes(&[0xef, 0xa5, 0x71]).set(24, true);
+        let _ = &BitVec::from_bytes(&[0xef, 0xa5, 0x71]).set(24, true);
     }
 
     #[test]
