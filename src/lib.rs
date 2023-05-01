@@ -1,3 +1,4 @@
+#![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(feature = "custom-allocator", feature(allocator_api))]
 
 //! This is a bit vector implementation with guaranteed `[u8]` [LSB 0][1]
@@ -11,12 +12,23 @@
 
 // TODO: Flesh out docs.
 
+extern crate alloc;
+
 #[cfg(feature = "custom-allocator")]
 use core::alloc::Allocator;
-use std::fmt;
-use std::num::Wrapping;
+use core::fmt;
+use core::num::Wrapping;
+use core::write;
+use core::prelude::rust_2021::*;
+use alloc::vec::Vec;
+use alloc::vec;
+use core::default::Default;
 #[cfg(feature = "custom-allocator")]
+#[cfg(feature = "std")]
 use std::alloc::Global;
+#[cfg(feature = "custom-allocator")]
+#[cfg(not(feature = "std"))]
+use alloc::alloc::Global;
 
 #[cfg(feature = "serde")]
 #[macro_use] extern crate serde;
@@ -28,7 +40,7 @@ use std::alloc::Global;
 #[derive(Clone, Default, PartialEq, Eq)]
 pub struct BitVec {
     nbits: usize,
-    vec: Vec<u8>
+    vec: Vec<u8>,
 }
 
 /// Bit vector with guaranteed `[u8]` LSB 0 representation and safe mutable access to this slice.
@@ -60,7 +72,7 @@ impl<A: Allocator, B: Allocator> PartialEq<BitVec<B>> for BitVec<A>
 }
 
 #[cfg(feature = "custom-allocator")]
-impl Eq for BitVec {}
+impl<A: Allocator> Eq for BitVec<A> where Vec<u8, A>: Default {}
 
 fn bytes_in_bits(nbits: usize) -> usize {
     // #bytes = #ceil(nbits / 8)
@@ -76,28 +88,28 @@ impl BitVec {
     // Constructors
 
     /// Constructs an empty `BitVec`.
-    pub fn new() -> BitVec {
-        BitVec { vec: Vec::new(), nbits: 0 }
+    pub fn new() -> Self {
+        Self { vec: Vec::new(), nbits: 0 }
     }
 
     /// Constructs an empty `BitVec` with the given capacity.
     ///
     /// The bit vector will be able to hold at least capacity bits without reallocating. If
     /// capacity is 0, the bit vector will not allocate.
-    pub fn with_capacity(capacity: usize) -> BitVec {
-        BitVec { vec: Vec::with_capacity(bytes_in_bits(capacity)), nbits: 0 }
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self { vec: Vec::with_capacity(bytes_in_bits(capacity)), nbits: 0 }
     }
 
     /// Constructs a `BitVec` from bytes.
-    pub fn from_bytes(bytes: &[u8]) -> BitVec {
-        let mut vec = BitVec { vec: Vec::from(bytes), nbits: bytes.len() * 8 };
+    pub fn from_bytes(bytes: &[u8]) -> Self {
+        let mut vec = Self { vec: Vec::from(bytes), nbits: bytes.len() * 8 };
         vec.set_unused_zero();
         vec
     }
 
     /// Constructs a `BitVec` from bools.
-    pub fn from_bools(bools: &[bool]) -> BitVec {
-        let mut vec = BitVec::with_capacity(bools.len());
+    pub fn from_bools(bools: &[bool]) -> Self {
+        let mut vec = Self::with_capacity(bools.len());
         for &b in bools {
             vec.push(b);
         }
@@ -105,8 +117,8 @@ impl BitVec {
     }
 
     /// Constructs a `BitVec` from a repeating bit value.
-    pub fn from_elem(len: usize, value: bool) -> BitVec {
-        let mut vec = BitVec {
+    pub fn from_elem(len: usize, value: bool) -> Self {
+        let mut vec = Self {
             vec: vec![byte_from_bool(value); bytes_in_bits(len)],
             nbits: len
         };
@@ -261,7 +273,7 @@ impl BitVec {
         if new_len > self.len() {
             let additional = new_len - self.len();
             self.reserve(additional);
-            self.extend(::std::iter::repeat(value).take(additional));
+            self.extend(core::iter::repeat(value).take(additional));
         } else {
             self.truncate(new_len);
         }
@@ -331,7 +343,7 @@ impl<'a> Extend<&'a bool> for BitVec {
     }
 }
 
-impl ::std::iter::FromIterator<bool> for BitVec {
+impl core::iter::FromIterator<bool> for BitVec {
     fn from_iter<T>(iterable: T) -> Self
         where T: IntoIterator<Item = bool>
     {
@@ -343,7 +355,7 @@ impl ::std::iter::FromIterator<bool> for BitVec {
     }
 }
 
-impl<'a> ::std::iter::FromIterator<&'a bool> for BitVec {
+impl<'a> core::iter::FromIterator<&'a bool> for BitVec {
     fn from_iter<T>(iterable: T) -> Self
         where T: IntoIterator<Item = &'a bool>
     {
@@ -468,7 +480,7 @@ impl IntoIterator for BitVec {
 static TRUE: bool = true;
 static FALSE: bool = false;
 
-impl ::std::ops::Index<usize> for BitVec {
+impl core::ops::Index<usize> for BitVec {
     type Output = bool;
 
     fn index(&self, index: usize) -> &Self::Output {
@@ -532,7 +544,7 @@ mod test {
 
     #[test]
     fn test_convert_from_bools() {
-        use std::iter::FromIterator;
+        use core::iter::FromIterator;
 
         let from: &[bool] = &[true, false, false, true, true, false, false, true, true, true, false];
         let vec: BitVec = BitVec::from_bools(from);
@@ -794,11 +806,11 @@ mod test {
         assert_eq!(vec.len(), 12);
         assert_eq!(vec.as_bytes(), &[0xef, 0x05]);
 
-        vec.extend(::std::iter::repeat(true).take(5));
+        vec.extend(core::iter::repeat(true).take(5));
         assert_eq!(vec.len(), 17);
         assert_eq!(vec.as_bytes(), &[0xef, 0xf5, 0x01]);
 
-        vec.extend(::std::iter::repeat(&true).take(6));
+        vec.extend(core::iter::repeat(&true).take(6));
         assert_eq!(vec.len(), 23);
         assert_eq!(vec.as_bytes(), &[0xef, 0xf5, 0x7f]);
     }
