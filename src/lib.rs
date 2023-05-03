@@ -22,7 +22,6 @@ use core::write;
 use core::prelude::rust_2021::*;
 use alloc::vec::Vec;
 use alloc::vec;
-use core::default::Default;
 #[cfg(feature = "unstable")]
 #[cfg(feature = "std")]
 use std::alloc::Global;
@@ -47,8 +46,8 @@ pub struct BitVec {
 /// Slices into the bit vector are guaranteed to have the unused bits on the last byte set to 0.
 #[cfg(feature = "unstable")]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
-#[derive(Clone, Default)]
-pub struct BitVec<A: Allocator = Global> where Vec<u8, A>: Default {
+#[derive(Clone)]
+pub struct BitVec<A: Allocator = Global> {
     nbits: usize,
     vec: Vec<u8, A>,
 }
@@ -57,9 +56,7 @@ pub struct BitVec<A: Allocator = Global> where Vec<u8, A>: Default {
 // they use the same allocator or whether their allocator implements
 // PartialEq or not
 #[cfg(feature = "unstable")]
-impl<A: Allocator, B: Allocator> PartialEq<BitVec<B>> for BitVec<A>
-    where Vec<u8, B>: Default, Vec<u8, A>: Default
-{
+impl<A: Allocator, B: Allocator> PartialEq<BitVec<B>> for BitVec<A> {
     
     fn eq(&self, other: &BitVec<B>) -> bool {
         self.nbits == other.nbits && self.vec == other.vec
@@ -71,8 +68,17 @@ impl<A: Allocator, B: Allocator> PartialEq<BitVec<B>> for BitVec<A>
 
 }
 
+#[cfg(feauture = "unstable")]
+impl Default for BitVec {
+    
+    fn default() -> Self {
+        Self { nbits: 0, vec: Vec::new() }
+    }
+
+}
+
 #[cfg(feature = "unstable")]
-impl<A: Allocator> Eq for BitVec<A> where Vec<u8, A>: Default {}
+impl<A: Allocator> Eq for BitVec<A> {}
 
 fn bytes_in_bits(nbits: usize) -> usize {
     // #bytes = #ceil(nbits / 8)
@@ -83,12 +89,21 @@ fn byte_from_bool(bit: bool) -> u8 {
     if bit { !0u8 } else { 0u8 }
 }
 
+#[cfg(feature = "unstable")]
+impl<A: Allocator> BitVec<A> {
+
+    pub const fn new_in(alloc: A) -> Self {
+        Self { vec: Vec::new_in(alloc), nbits: 0}
+    }
+
+}
+
 impl BitVec {
     ////////////////////////////////////////
     // Constructors
 
     /// Constructs an empty `BitVec`.
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self { vec: Vec::new(), nbits: 0 }
     }
 
