@@ -2,7 +2,7 @@
 name = "bitvec-rs"
 version = "0.2.0"
 edition = "2021"
-authors = ["Ashish Myles <marcianx@gmail.com>"]
+authors = ["Ashish Myles <marcianx@gmail.com>", "TeleportAura"]
 repository = "https://github.com/marcianx/bitvec-rs"
 description = """
 Bit vector with guaranteed `[u8]` representation and the ability to get safe
