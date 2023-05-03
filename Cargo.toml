@@ -15,7 +15,7 @@ license = "MIT/Apache-2.0"
 [features]
 default = ["std"]
 std = []
-custom-allocator = []
+unstable = []
 
 [dependencies.serde]
 version = "*"

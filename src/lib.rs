@@ -1,5 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
-#![cfg_attr(feature = "custom-allocator", feature(allocator_api))]
+#![cfg_attr(feature = "unstable", feature(allocator_api))]
 
 //! This is a bit vector implementation with guaranteed `[u8]` [LSB 0][1]
 //! representation and the ability to get safe immutable and mutable views into its
@@ -14,7 +14,7 @@
 
 extern crate alloc;
 
-#[cfg(feature = "custom-allocator")]
+#[cfg(feature = "unstable")]
 use core::alloc::Allocator;
 use core::fmt;
 use core::num::Wrapping;
@@ -23,10 +23,10 @@ use core::prelude::rust_2021::*;
 use alloc::vec::Vec;
 use alloc::vec;
 use core::default::Default;
-#[cfg(feature = "custom-allocator")]
+#[cfg(feature = "unstable")]
 #[cfg(feature = "std")]
 use std::alloc::Global;
-#[cfg(feature = "custom-allocator")]
+#[cfg(feature = "unstable")]
 #[cfg(not(feature = "std"))]
 use alloc::alloc::Global;
 
@@ -35,7 +35,7 @@ use alloc::alloc::Global;
 
 /// Bit vector with guaranteed `[u8]` LSB 0 representation and safe mutable access to this slice.
 /// Slices into the bit vector are guaranteed to have the unused bits on the last byte set to 0.
-#[cfg(not(feature = "custom-allocator"))]
+#[cfg(not(feature = "unstable"))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Clone, Default, PartialEq, Eq)]
 pub struct BitVec {
@@ -45,18 +45,18 @@ pub struct BitVec {
 
 /// Bit vector with guaranteed `[u8]` LSB 0 representation and safe mutable access to this slice.
 /// Slices into the bit vector are guaranteed to have the unused bits on the last byte set to 0.
-#[cfg(feature = "custom-allocator")]
+#[cfg(feature = "unstable")]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Clone, Default)]
 pub struct BitVec<A: Allocator = Global> where Vec<u8, A>: Default {
     nbits: usize,
-    vec: Vec<u8, A>
+    vec: Vec<u8, A>,
 }
 
-// explicitly allow comparisons between BitVecs regardless of whether
+// Explicitly allow comparisons between BitVecs regardless of whether
 // they use the same allocator or whether their allocator implements
 // PartialEq or not
-#[cfg(feature = "custom-allocator")]
+#[cfg(feature = "unstable")]
 impl<A: Allocator, B: Allocator> PartialEq<BitVec<B>> for BitVec<A>
     where Vec<u8, B>: Default, Vec<u8, A>: Default
 {
@@ -71,7 +71,7 @@ impl<A: Allocator, B: Allocator> PartialEq<BitVec<B>> for BitVec<A>
 
 }
 
-#[cfg(feature = "custom-allocator")]
+#[cfg(feature = "unstable")]
 impl<A: Allocator> Eq for BitVec<A> where Vec<u8, A>: Default {}
 
 fn bytes_in_bits(nbits: usize) -> usize {
