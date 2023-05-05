@@ -13,8 +13,7 @@ keywords = ["bit", "vector", "bitvec"]
 license = "MIT/Apache-2.0"
 
 [features]
-default = ["std"]
-std = []
+default = []
 unstable = []
 
 [dependencies.serde]

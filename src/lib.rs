@@ -23,10 +23,6 @@ use core::prelude::rust_2021::*;
 use alloc::vec::Vec;
 use alloc::vec;
 #[cfg(feature = "unstable")]
-#[cfg(feature = "std")]
-use std::alloc::Global;
-#[cfg(feature = "unstable")]
-#[cfg(not(feature = "std"))]
 use alloc::alloc::Global;
 
 #[cfg(feature = "serde")]
