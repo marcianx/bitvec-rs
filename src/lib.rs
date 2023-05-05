@@ -91,9 +91,17 @@ fn byte_from_bool(bit: bool) -> u8 {
 
 #[cfg(feature = "unstable")]
 impl<A: Allocator> BitVec<A> {
+    ////////////////////////////////////////
+    // Constructors
 
+    /// Constructs an empty `BitVec`.
     pub const fn new_in(alloc: A) -> Self {
-        Self { vec: Vec::new_in(alloc), nbits: 0}
+        Self { vec: Vec::new_in(alloc), nbits: 0 }
+    }
+
+    /// Constructs a `BitVec` from bytes.
+    pub fn with_capacity_in(capacity: usize, alloc: A) -> Self {
+        Self { vec: Vec::with_capacity_in(bytes_in_bits(capacity), alloc), nbits: 0 }
     }
 
 }
@@ -135,164 +143,193 @@ impl BitVec {
     pub fn from_elem(len: usize, value: bool) -> Self {
         let mut vec = Self {
             vec: vec![byte_from_bool(value); bytes_in_bits(len)],
-            nbits: len
+            nbits: len,
         };
         vec.set_unused_zero();
         vec
     }
 
-    ////////////////////////////////////////
-    // Converters/views
+}
 
-    /// Returns a byte slice view of the data.
-    pub fn as_bytes(&self) -> &[u8] { &self.vec }
+macro_rules! impl_bitvec {
+    ($into_bytes_type: ty) => {
 
-    /// Invokes the given function on a mut byte slice view of the data. After `f` completes, the
-    /// trailing unused bits of the last byte are automatically set to 0.
-    pub fn with_bytes_mut<U, F: FnOnce(&mut [u8]) -> U>(&mut self, f: F) -> U {
-        let val = f(&mut self.vec);
-        self.set_unused_zero();
-        val
-    }
+        ////////////////////////////////////////
+        // Converters/views
 
-    /// Consumes the `self` and returns the underlying `Vec<u8>` of length `ceil(self.len()/8)`.
-    /// The values of the bits in the last byte of `Vec<u8>` beyond the length of the `BitVec` are
-    /// 0.
-    pub fn into_bytes(self) -> Vec<u8> { self.vec }
+        /// Returns a byte slice view of the data.
+        pub fn as_bytes(&self) -> &[u8] { &self.vec }
 
-    ////////////////////////////////////////
-    // Getters/setters
-
-    /// Returns the length of the bit vector.
-    pub fn len(&self) -> usize { self.nbits }
-
-    /// Returns whether the vector is empty.
-    pub fn is_empty(&self) -> bool { self.nbits == 0 }
-
-    /// Validates the index for validity or panics.
-    fn validate_index(&self, index: usize) {
-        assert!(self.nbits <= self.vec.len() * 8,
-                "Expected #bits {} <= 8 x (#bytes {} in vec).", self.nbits, self.vec.len());
-        if index >= self.nbits { panic!("Index {} out of bounds [0, {})", index, self.nbits); }
-    }
-
-    /// Gets the bit at the given `index`.
-    pub fn get(&self, index: usize) -> Option<bool> {
-        if index < self.len() {
-            Some(unsafe { self.get_unchecked(index) })
-        } else {
-            None
-        }
-    }
-
-    /// Sets the bit at the given `index`. Panics if `index` exceeds length.
-    pub fn set(&mut self, index: usize, value: bool) {
-        self.validate_index(index);
-        unsafe { self.set_unchecked(index, value) };
-    }
-
-    /// Swaps two elements in the `BitVec`.
-    pub fn swap(&mut self, i: usize, j: usize) {
-        self.validate_index(i);
-        self.validate_index(j);
-        unsafe {
-            let val_i = self.get_unchecked(i);
-            let val_j = self.get_unchecked(j);
-            self.set_unchecked(i, val_j);
-            self.set_unchecked(j, val_i);
-        }
-    }
-
-    /// Gets the bit at the given `index` without bounds checking.
-    pub unsafe fn get_unchecked(&self, index: usize) -> bool {
-        let byte = self.vec.get_unchecked(index / 8);
-        let pattern = 1u8 << (index % 8);
-        (*byte & pattern) != 0u8
-    }
-
-    /// Sets the bit at the given `index` without bounds checking.
-    pub unsafe fn set_unchecked(&mut self, index: usize, value: bool) {
-        let byte = self.vec.get_unchecked_mut(index / 8);
-        let pattern = 1u8 << (index % 8);
-        *byte = if value { *byte |  pattern }
-                else     { *byte & !pattern };
-    }
-
-    ////////////////////////////////////////
-    // Adding/removing items
-
-    /// Pushes a boolean to the end of the `BitVec`.
-    pub fn push(&mut self, value: bool) {
-        let nbits = self.nbits; // avoid mutable borrow error
-        if nbits % 8 == 0 {
-            self.vec.push(if value { 1u8 } else { 0u8 });
-        } else {
-            unsafe { self.set_unchecked(nbits, value) };
-        }
-        self.nbits += 1;
-    }
-
-    /// Pops a boolean from the end of the `BitVec`.
-    pub fn pop(&mut self) -> Option<bool> {
-        if self.nbits == 0 { return None }
-        self.nbits -= 1;
-
-        // Get the popped bit value to return.
-        let nbits = self.nbits; // avoid mutable borrow error
-        let value = unsafe { self.get_unchecked(nbits) };
-        // Set the popped bit value to 0.
-        unsafe { self.set_unchecked(nbits, false); }
-        // Pop off the last byte from the underlying vector if it has no active bits.
-        if self.nbits % 8 == 0 {
-            assert!(self.nbits == (self.vec.len() - 1) * 8,
-                "Expected #bits {} == 8 x (#bytes {} in vec - 1) after bit pop and before vec pop.",
-                self.nbits, self.vec.len());
-            self.vec.pop();
+        /// Invokes the given function on a mut byte slice view of the data. After `f` completes, the
+        /// trailing unused bits of the last byte are automatically set to 0.
+        pub fn with_bytes_mut<U, F: FnOnce(&mut [u8]) -> U>(&mut self, f: F) -> U {
+            let val = f(&mut self.vec);
+            self.set_unused_zero();
+            val
         }
 
-        Some(value)
-    }
+        /// Consumes the `self` and returns the underlying `Vec<u8>` of length `ceil(self.len()/8)`.
+        /// The values of the bits in the last byte of `Vec<u8>` beyond the length of the `BitVec` are
+        /// 0.
+        pub fn into_bytes(self) -> $into_bytes_type { self.vec }
 
-    /// Clears the `BitVec`, removing all values.
-    pub fn clear(&mut self) {
-        self.vec.clear();
-        self.nbits = 0;
-    }
+        ////////////////////////////////////////
+        // Getters/setters
 
-    /// Returns the number of booleans that the bitvec can hold without reallocating.
-    pub fn capacity(&self) -> usize {
-        self.vec.capacity() * 8
-    }
+        /// Returns the length of the bit vector.
+        pub fn len(&self) -> usize { self.nbits }
 
-    /// Reserves capacity for at least additional more booleans to be inserted in the given
-    /// `BitVec`. The collection may reserve more space to avoid frequent reallocations.
-    pub fn reserve(&mut self, additional: usize) {
-        self.vec.reserve(bytes_in_bits(additional))
-    }
+        /// Returns whether the vector is empty.
+        pub fn is_empty(&self) -> bool { self.nbits == 0 }
 
-    /// Shorten a vector, dropping excess elements.
-    ///
-    /// If `len` is greater than the vector's current length, this has no effect.
-    pub fn truncate(&mut self, len: usize) {
-        if len < self.len() {
+        /// Validates the index for validity or panics.
+        fn validate_index(&self, index: usize) {
+            assert!(self.nbits <= self.vec.len() * 8,
+                    "Expected #bits {} <= 8 x (#bytes {} in vec).", self.nbits, self.vec.len());
+            if index >= self.nbits { panic!("Index {} out of bounds [0, {})", index, self.nbits); }
+        }
+
+        /// Gets the bit at the given `index`.
+        pub fn get(&self, index: usize) -> Option<bool> {
+            if index < self.len() {
+                Some(unsafe { self.get_unchecked(index) })
+            } else {
+                None
+            }
+        }
+
+        /// Sets the bit at the given `index`. Panics if `index` exceeds length.
+        pub fn set(&mut self, index: usize, value: bool) {
+            self.validate_index(index);
+            unsafe { self.set_unchecked(index, value) };
+        }
+
+        /// Swaps two elements in the `BitVec`.
+        pub fn swap(&mut self, i: usize, j: usize) {
+            self.validate_index(i);
+            self.validate_index(j);
+            unsafe {
+                let val_i = self.get_unchecked(i);
+                let val_j = self.get_unchecked(j);
+                self.set_unchecked(i, val_j);
+                self.set_unchecked(j, val_i);
+            }
+        }
+
+        /// Gets the bit at the given `index` without bounds checking.
+        pub unsafe fn get_unchecked(&self, index: usize) -> bool {
+            let byte = self.vec.get_unchecked(index / 8);
+            let pattern = 1u8 << (index % 8);
+            (*byte & pattern) != 0u8
+        }
+
+        /// Sets the bit at the given `index` without bounds checking.
+        pub unsafe fn set_unchecked(&mut self, index: usize, value: bool) {
+            let byte = self.vec.get_unchecked_mut(index / 8);
+            let pattern = 1u8 << (index % 8);
+            *byte = if value { *byte |  pattern }
+                    else     { *byte & !pattern };
+        }
+
+        ////////////////////////////////////////
+        // Adding/removing items
+
+        /// Pushes a boolean to the end of the `BitVec`.
+        pub fn push(&mut self, value: bool) {
+            let nbits = self.nbits; // avoid mutable borrow error
+            if nbits % 8 == 0 {
+                self.vec.push(if value { 1u8 } else { 0u8 });
+            } else {
+                unsafe { self.set_unchecked(nbits, value) };
+            }
+            self.nbits += 1;
+        }
+
+         /// Pops a boolean from the end of the `BitVec`.
+        pub fn pop(&mut self) -> Option<bool> {
+            if self.nbits == 0 { return None }
+            self.nbits -= 1;
+
+            // Get the popped bit value to return.
+            let nbits = self.nbits; // avoid mutable borrow error
+            let value = unsafe { self.get_unchecked(nbits) };
+            // Set the popped bit value to 0.
+            unsafe { self.set_unchecked(nbits, false); }
+            // Pop off the last byte from the underlying vector if it has no active bits.
+            if self.nbits % 8 == 0 {
+                assert!(self.nbits == (self.vec.len() - 1) * 8,
+                    "Expected #bits {} == 8 x (#bytes {} in vec - 1) after bit pop and before vec pop.",
+                    self.nbits, self.vec.len());
+                self.vec.pop();
+            }
+
+            Some(value)
+        }
+
+        /// Clears the `BitVec`, removing all values.
+        pub fn clear(&mut self) {
+            self.vec.clear();
+            self.nbits = 0;
+        }
+
+        /// Returns the number of booleans that the bitvec can hold without reallocating.
+        pub fn capacity(&self) -> usize {
+            self.vec.capacity() * 8
+        }
+
+        /// Reserves capacity for at least additional more booleans to be inserted in the given
+        /// `BitVec`. The collection may reserve more space to avoid frequent reallocations.
+        pub fn reserve(&mut self, additional: usize) {
+            self.vec.reserve(bytes_in_bits(additional))
+        }
+
+        /// Shorten a vector, dropping excess elements.
+        ///
+        /// If `len` is greater than the vector's current length, this has no effect.
+        pub fn truncate(&mut self, len: usize) {
+            if len < self.len() {
             let nbytes = bytes_in_bits(len);
             self.vec.truncate(nbytes);
             self.nbits = len;
             self.set_unused_zero()
+            }
         }
-    }
 
-    /// Reserves capacity for at least additional more booleans to be inserted in the given
-    /// `BitVec`. The collection may reserve more space to avoid frequent reallocations.
-    pub fn resize(&mut self, new_len: usize, value: bool) {
-        if new_len > self.len() {
-            let additional = new_len - self.len();
-            self.reserve(additional);
-            self.extend(core::iter::repeat(value).take(additional));
-        } else {
-            self.truncate(new_len);
+        /// Reserves capacity for at least additional more booleans to be inserted in the given
+        /// `BitVec`. The collection may reserve more space to avoid frequent reallocations.
+        pub fn resize(&mut self, new_len: usize, value: bool) {
+            if new_len > self.len() {
+                let additional = new_len - self.len();
+                self.reserve(additional);
+                for _ in 0..additional {
+                    self.push(value);
+                }
+            } else {
+                self.truncate(new_len);
+            }
+        }
+
+
+        ////////////////////////////////////////
+        // Helpers
+
+        /// Sets the extra unused bits in the bitvector to 0.
+        fn set_unused_zero(&mut self) {
+            if self.nbits % 8 == 0 { return }
+            let len = self.vec.len(); // avoid mutable borrow error
+            assert!(len > 0);
+
+            let byte = unsafe { self.vec.get_unchecked_mut(len - 1) };
+            // Pattern with all 1's in the used bits only, avoiding overflow check in debug.
+            let pattern = (Wrapping(1u8 << (self.nbits % 8)) - Wrapping(1u8)).0;
+            *byte &= pattern;
         }
     }
+}
+
+#[cfg(not(feature = "unstable"))]
+impl BitVec {
+    impl_bitvec!(Vec<u8>);
 
     ////////////////////////////////////////
     // Iterators
@@ -301,39 +338,57 @@ impl BitVec {
     pub fn iter(&self) -> Iter {
         self.into_iter()
     }
+}
+
+#[cfg(feature = "unstable")]
+impl<A: Allocator> BitVec<A> {
+    impl_bitvec!(Vec<u8, A>);
 
     ////////////////////////////////////////
-    // Helpers
+    // Iterators
 
-    /// Sets the extra unused bits in the bitvector to 0.
-    fn set_unused_zero(&mut self) {
-        if self.nbits % 8 == 0 { return }
-        let len = self.vec.len(); // avoid mutable borrow error
-        assert!(len > 0);
-
-        let byte = unsafe { self.vec.get_unchecked_mut(len - 1) };
-        // Pattern with all 1's in the used bits only, avoiding overflow check in debug.
-        let pattern = (Wrapping(1u8 << (self.nbits % 8)) - Wrapping(1u8)).0;
-        *byte &= pattern;
+    /// Returns an iterator for the booleans in the bitvec.
+    pub fn iter(&self) -> Iter<A> {
+        self.into_iter()
     }
 }
 
+macro_rules! impl_display {
+    () => {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            for (val, index) in self.iter().zip(0..usize::max_value()) {
+                if index > 0 && index % 8 == 0 {
+                    write!(f, " ")?;
+                }
+                write!(f, "{}", if val { "1" } else { "." })?;
+            }
+            Ok(())
+        }
+    }
+}
+
+#[cfg(not(feature = "unstable"))]
 impl fmt::Debug for BitVec {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "BitVec{{{:?}: {}}}", self.nbits, &self)
     }
 }
 
+#[cfg(not(feature = "unstable"))]
 impl fmt::Display for BitVec {
+    impl_display!();
+}
+
+#[cfg(feature = "unstable")]
+impl<A: Allocator> fmt::Debug for BitVec<A> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for (val, index) in self.iter().zip(0..usize::max_value()) {
-            if index > 0 && index % 8 == 0 {
-                write!(f, " ")?;
-            }
-            write!(f, "{}", if val { "1" } else { "." })?;
-        }
-        Ok(())
+        write!(f, "BitVec{{{:?}: {}}}", self.nbits, &self)
     }
+}
+
+#[cfg(feature = "unstable")]
+impl<A: Allocator> fmt::Display for BitVec<A> {
+    impl_display!();
 }
 
 impl Extend<bool> for BitVec {
@@ -395,26 +450,13 @@ impl From<&Vec<bool>> for BitVec {
 }
 
 impl From<Vec<bool>> for BitVec {
-    fn from(bools: Vec<bool>) -> Self {
+        fn from(bools: Vec<bool>) -> Self {
         BitVec::from_bools(&bools)
     }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Iterators
-
-/// Allows forward iteration through the bits of a bit vector.
-#[derive(Clone)]
-pub struct Iter<'a> {
-    vec: &'a BitVec,
-    index: usize,
-}
-
-/// Consumes and allows forward iteration through the bits of a bit vector.
-pub struct IntoIter {
-    vec: BitVec,
-    index: usize,
-}
 
 macro_rules! impl_iter {
     () => {
@@ -459,32 +501,106 @@ macro_rules! impl_iter {
     };
 }
 
-impl<'a> Iterator for Iter<'a> {
-    impl_iter!();
-}
+pub use self::iter::*;
 
-impl Iterator for IntoIter {
-    impl_iter!();
-}
+#[cfg(not(feature = "unstable"))]
+mod iter {
+    use super::BitVec;
 
-impl<'a> IntoIterator for &'a BitVec {
-    type Item = bool;
-    type IntoIter = Iter<'a>;
-    fn into_iter(self) -> Self::IntoIter {
-        Iter {
-            vec: self,
-            index: 0,
+    /// Allows forward iteration through the bits of a bit vector.
+    #[derive(Clone)]
+    pub struct Iter<'a>
+    {
+        vec: &'a BitVec,
+        index: usize,
+    }
+
+    /// Consumes and allows forward iteration through the bits of a bit vector.
+    pub struct IntoIter
+    {
+        vec: BitVec,
+        index: usize,
+    }
+
+    impl<'a> Iterator for Iter<'a> {
+        impl_iter!();
+    }
+
+    impl Iterator for IntoIter {
+        impl_iter!();
+    }
+
+    impl<'a> IntoIterator for &'a BitVec {
+        type Item = bool;
+        type IntoIter = Iter<'a>;
+        fn into_iter(self) -> Self::IntoIter {
+            Iter {
+                vec: self,
+                index: 0,
+            }
+        }
+    }
+
+    impl IntoIterator for BitVec {
+        type Item = bool;
+        type IntoIter = IntoIter;
+        fn into_iter(self) -> Self::IntoIter {
+            IntoIter {
+                vec: self,
+                index: 0,
+            }
         }
     }
 }
 
-impl IntoIterator for BitVec {
-    type Item = bool;
-    type IntoIter = IntoIter;
-    fn into_iter(self) -> Self::IntoIter {
-        IntoIter {
-            vec: self,
-            index: 0,
+#[cfg(feature = "unstable")]
+mod iter {
+    use alloc::alloc::Global;
+    use core::alloc::Allocator;
+    use super::BitVec;
+
+    /// Allows forward iteration through the bits of a bit vector.
+    #[derive(Clone)]
+    pub struct Iter<'a, A: Allocator = Global>
+    {
+        vec: &'a BitVec<A>,
+        index: usize,
+    }
+
+    /// Consumes and allows forward iteration through the bits of a bit vector.
+    pub struct IntoIter<A: Allocator = Global>
+    {
+        vec: BitVec<A>,
+        index: usize,
+    }
+
+    impl<'a, A: Allocator> Iterator for Iter<'a, A> {
+        impl_iter!();
+    }
+
+    impl<A: Allocator> Iterator for IntoIter<A> {
+        impl_iter!();
+    }
+
+    impl<'a, A: Allocator> IntoIterator for &'a BitVec<A> {
+        type Item = bool;
+        type IntoIter = Iter<'a, A>;
+        fn into_iter(self) -> Self::IntoIter {
+            Iter::<A> {
+                vec: self,
+                index: 0,
+            }
+        }
+    }
+
+    impl<A: Allocator> IntoIterator for BitVec<A> {
+        type Item = bool;
+        type IntoIter = IntoIter<A>;
+        fn into_iter(self) -> Self::IntoIter {
+            IntoIter::<A> {
+                vec: self,
+                index: 0,
+            }
         }
     }
 }
@@ -495,6 +611,7 @@ impl IntoIterator for BitVec {
 static TRUE: bool = true;
 static FALSE: bool = false;
 
+#[cfg(not(feature = "unstable"))]
 impl core::ops::Index<usize> for BitVec {
     type Output = bool;
 
@@ -505,6 +622,16 @@ impl core::ops::Index<usize> for BitVec {
     }
 }
 
+#[cfg(feature = "unstable")]
+impl<A: Allocator> core::ops::Index<usize> for BitVec<A> {
+    type Output = bool;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        assert!(index < self.len());
+        let value = unsafe { self.get_unchecked(index) };
+        if value { &TRUE } else { &FALSE }
+    }
+}
 ////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
@@ -874,5 +1001,16 @@ mod test {
         assert_eq!(iter.clone().count(), 0);
         assert_eq!(iter.clone().last(), None);
         assert_eq!(iter.nth(0), None);
+    }
+
+    #[cfg(feature = "unstable")]
+    #[test]
+    fn test_custom_allocator() {
+        use alloc::alloc::Global;
+        
+        let mut vec = Vec::new_in(Global);
+        vec.push(false);
+        vec.push(true);
+        assert_eq!(vec[1], true);
     }
 }
