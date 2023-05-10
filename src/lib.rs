@@ -50,16 +50,12 @@ pub struct BitVec<A: Allocator = Global> {
 
 // Explicitly allow comparisons between BitVecs regardless of whether
 // they use the same allocator or whether their allocator implements
-// PartialEq or not
+// PartialEq or not.
 #[cfg(feature = "unstable")]
 impl<A: Allocator, B: Allocator> PartialEq<BitVec<B>> for BitVec<A> {
     
     fn eq(&self, other: &BitVec<B>) -> bool {
         self.nbits == other.nbits && self.vec == other.vec
-    }
-
-    fn ne(&self, other: &BitVec<B>) -> bool {
-        self.nbits != other.nbits || self.vec != other.vec
     }
 
 }
