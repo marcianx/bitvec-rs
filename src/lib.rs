@@ -633,6 +633,7 @@ impl<A: Allocator> core::ops::Index<usize> for BitVec<A> {
 #[cfg(test)]
 mod test {
     use super::BitVec;
+    use alloc::{vec::Vec, vec, format};
 
     #[test]
     fn test_index() {
