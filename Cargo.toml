@@ -1,6 +1,6 @@
 [package]
 name = "bitvec-rs"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 authors = ["Ashish Myles <marcianx@gmail.com>", "TeleportAura"]
 repository = "https://github.com/marcianx/bitvec-rs"
