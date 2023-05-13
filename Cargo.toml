@@ -17,6 +17,6 @@ default = []
 unstable = []
 
 [dependencies.serde]
-version = "*"
+version = "1.0.94"
 optional = true
 features = [ "derive" ]
