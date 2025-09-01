@@ -1,4 +1,3 @@
-#![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(feature = "unstable", feature(allocator_api))]
 
 //! This is a bit vector implementation with guaranteed `[u8]` [LSB 0][1]
@@ -60,7 +59,7 @@ impl<A: Allocator, B: Allocator> PartialEq<BitVec<B>> for BitVec<A> {
 
 }
 
-#[cfg(feauture = "unstable")]
+#[cfg(feature = "unstable")]
 impl Default for BitVec {
     
     fn default() -> Self {
@@ -327,7 +326,7 @@ impl BitVec {
     // Iterators
 
     /// Returns an iterator for the booleans in the bitvec.
-    pub fn iter(&self) -> Iter {
+    pub fn iter(&self) -> Iter<'_> {
         self.into_iter()
     }
 }
