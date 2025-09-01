@@ -4,13 +4,14 @@ version = "0.2.1"
 edition = "2021"
 authors = ["Ashish Myles <marcianx@gmail.com>", "TeleportAura"]
 repository = "https://github.com/marcianx/bitvec-rs"
+categories = ["data-structures"]
 description = """
 Bit vector with guaranteed `[u8]` representation and the ability to get safe
 immutable and mutable views into its internal vector for easy I/O.
 """
 readme = "README.md"
 keywords = ["bit", "vector", "bitvec"]
-license = "MIT/Apache-2.0"
+license = "MIT OR Apache-2.0"
 
 [features]
 default = []
